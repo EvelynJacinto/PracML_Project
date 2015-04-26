@@ -1,0 +1,51 @@
+---
+title: "Weight Lifting Activity Recognition"
+author: "Evelyn Jacinto"
+date: "Thursday, April 23, 2015"
+output: html_document
+---
+
+In this assignment, a classification algorithm is trained that will return the type of weight lifting activity based on data gathered from sensors while a participant performs Unilateral Dumbbell Biceps Curl in five different fashions. The sensors are placed on the belt, arm, forearm and on the dumbbell. The five ways the exercise was performed are: exactly according to the specification (Class A), throwing the elbows to the front (Class B), lifting the dumbbell only halfway (Class C), lowering the dumbbell only halfway (Class D) and throwing the hips to the front (Class E). Class A corresponds to the specified execution of the exercise, while the other 4 classes correspond to common mistakes. Participants were supervised by an experienced weight lifter to make sure the execution complied to the manner they were supposed to simulate and a relatively light dumbbell (1.25kg) was used to ensure their safety. The exercises were performed by six male participants aged between 20-28 years, with little weight lifting experience.
+
+The dataset was made available through the website [Groupware@LES]("http://groupware.les.inf.puc-rio.br/har#weight_lifting_exercises") and was gathered as part of the research [Qualitative Activity Recognition of Weight Lifting Exercises]("http://groupware.les.inf.puc-rio.br/work.jsf?p1=11201").
+
+
+## Feature Selection
+
+```{r,cache=TRUE}
+trng <- read.csv('./Data/pml-training.csv')
+```
+
+The training dataset has `r nrow(trng)` rows and `r ncol(trng)` columns. Following is the list of columns.
+
+```{r, echo=FALSE}
+names(trng)
+```
+
+The last column 'classe' represents how the exercise was performed and is the predicted variable. The first seven columns are related to how the data was gathered and will be excluded from fitting the model. There are two types of rows differentiated by the variable new\_window. Those with value 'yes' contain summary statistics for the rows within the window. The actual data rows have new\_window = 'no' and will be the only ones to be included in fitting the model.
+
+The list of predictors is further trimmed down by including only those with significant variability.
+
+```{r BuildTrng, warning=FALSE, message=FALSE, cache=TRUE}
+library(caret)
+trng1 <- trng[trng$new_window=='no',]
+nsv <- nearZeroVar(trng1,saveMetrics=TRUE)
+trngcolumns <- rownames(nsv[nsv$nzv==FALSE & nsv$zeroVar==FALSE,])
+trngcolumns
+```
+
+## Fitting the Model
+
+Random forests are among the best classification algorithms and was chosen for this exercise with many predictor variables and noisy data. No cross validation is explicitly specified since the out-of-bag sample error is already estimated in the random forest algorithm (Ref: [Random Forests
+Leo Breiman and Adele Cutler]("https://www.stat.berkeley.edu/~breiman/RandomForests/cc_home.htm#ooberr").
+
+```{r ModelFit, message=FALSE, cache=TRUE}
+library(randomForest)
+set.seed(2496)
+formula1 <- formula(paste("classe ~ ", paste(trngcolumns[7:58], collapse=" + ")))
+modfit <- randomForest(formula1, data=trng1)
+modfit
+```
+
+The results are quite good with an out-of-bag error rate estimate of 0.29%. This means that around 99.71% of new samples not included in the training set are expected to correctly classified. The model was able to correctly predict the 20 samples in the test set provided with this exercise.
+
